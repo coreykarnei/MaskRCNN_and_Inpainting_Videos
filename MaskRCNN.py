@@ -5,14 +5,24 @@ import os
 import numpy as np
 from Utils import HiddenPrints
 
-THRESHOLD = 0.2
+THRESHOLD = 0.2   # This value indicates the minimum confidence that a given mask needs for the model to consider it valid
+INFLATE_SIZE = 5  # This value is the size of the circle that will be drawn on each pixel of the mask in order to inflate it
 
-index_dict = {'person': 0, 'bicycle': 1, 'car': 2, 'motorcycle': 3, 'airplane': 4, 'bus': 5, 'train': 6, 'truck': 7, 'boat': 8, 'traffic light': 9, 'fire hydrant': 10, 'stop sign': 11,
-              'parking meter': 12, 'bench': 13, 'bird': 14,'cat': 15, 'dog': 16, 'horse': 17, 'sheep': 18, 'cow': 19, 'elephant': 20, 'bear': 21, 'zebra': 22, 'giraffe': 23, 'backpack': 24, 'umbrella': 25,
-              'handbag': 26,'tie': 27, 'suitcase': 28, 'frisbee': 29, 'skis': 30, 'snowboard': 31, 'sports ball': 32, 'kite': 33, 'baseball bat': 34, 'baseball glove': 35, 'skateboard': 36, 'surfboard': 37, 'tennis racket': 38,
-              'bottle': 39, 'wine glass': 40, 'cup': 41, 'fork': 42, 'knife': 43, 'spoon': 44, 'bowl': 45, 'banana': 46, 'apple': 47, 'sandwich': 48, 'orange': 49, 'broccoli': 50, 'carrot': 51, 'hot dog': 52, 'pizza': 53, 'donut': 54,
-              'cake': 55, 'chair': 56, 'couch': 57, 'potted plant': 58, 'bed': 59, 'dining table': 60, 'toilet': 61, 'tv': 62,'laptop': 63, 'mouse': 64, 'remote': 65, 'keyboard': 66, 'cell phone': 67, 'microwave': 68, 'oven': 69,
-              'toaster': 70, 'sink': 71, 'refrigerator': 72, 'book': 73, 'clock': 74, 'vase': 75, 'scissors': 76, 'teddy bear': 77, 'hair drier': 78, 'toothbrush': 79}
+index_dict = {'person': 0, 'bicycle': 1, 'car': 2, 'motorcycle': 3, 'airplane': 4, 'bus': 5, 'train': 6, 'truck': 7,
+              'boat': 8, 'traffic light': 9, 'fire hydrant': 10, 'stop sign': 11,
+              'parking meter': 12, 'bench': 13, 'bird': 14, 'cat': 15, 'dog': 16, 'horse': 17, 'sheep': 18, 'cow': 19,
+              'elephant': 20, 'bear': 21, 'zebra': 22, 'giraffe': 23, 'backpack': 24, 'umbrella': 25,
+              'handbag': 26, 'tie': 27, 'suitcase': 28, 'frisbee': 29, 'skis': 30, 'snowboard': 31, 'sports ball': 32,
+              'kite': 33, 'baseball bat': 34, 'baseball glove': 35, 'skateboard': 36, 'surfboard': 37,
+              'tennis racket': 38,
+              'bottle': 39, 'wine glass': 40, 'cup': 41, 'fork': 42, 'knife': 43, 'spoon': 44, 'bowl': 45, 'banana': 46,
+              'apple': 47, 'sandwich': 48, 'orange': 49, 'broccoli': 50, 'carrot': 51, 'hot dog': 52, 'pizza': 53,
+              'donut': 54,
+              'cake': 55, 'chair': 56, 'couch': 57, 'potted plant': 58, 'bed': 59, 'dining table': 60, 'toilet': 61,
+              'tv': 62, 'laptop': 63, 'mouse': 64, 'remote': 65, 'keyboard': 66, 'cell phone': 67, 'microwave': 68,
+              'oven': 69,
+              'toaster': 70, 'sink': 71, 'refrigerator': 72, 'book': 73, 'clock': 74, 'vase': 75, 'scissors': 76,
+              'teddy bear': 77, 'hair drier': 78, 'toothbrush': 79}
 
 
 def generate_masks_from_video(videoPath, objectsToMask):
@@ -63,8 +73,6 @@ def generate_mask_from_image(frame, objectsToMask, frameName, frameIndex, model)
     ##       mask image
     ## both images serve as input to the inpainting model
 
-
-
     height, width, channels = frame.shape
 
     frame = mx.nd.array(frame)
@@ -112,10 +120,10 @@ def remove_undesired_objects(objects_to_remove, ids, scores, bboxes, masks):
 
 
 def create_input_for_inpainting(masks, original_image):
-    img_output = original_image.copy()
+    img_pre_output = original_image.copy()
     for mask in masks:
         j = 0
-        for row in img_output:
+        for row in img_pre_output:
             i = 0
             for element in row:
                 if (mask[j, i] != 0):
@@ -123,6 +131,16 @@ def create_input_for_inpainting(masks, original_image):
                 i = i + 1
             # print(row)
             j = j + 1
+    img_output = img_pre_output.copy()
+    j = 0
+    for row in img_pre_output:
+        i = 0
+        for element in row:
+            if np.array_equal(element, [255, 255, 255]):
+                if not only_one_white_pixel(img_pre_output, i, j):
+                    img_output = cv2.circle(img_output, (i, j), INFLATE_SIZE, (255, 255, 255), 0)
+            i = i + 1
+        j = j + 1
 
     mask_output = img_output.copy()
     j = 0
@@ -136,3 +154,16 @@ def create_input_for_inpainting(masks, original_image):
         j = j + 1
 
     return img_output, mask_output
+
+
+def only_one_white_pixel(img, i, j):
+    if np.array_equal( img[j+1][i],  [255,255,255]):
+        return False
+    elif np.array_equal( img[j-1][i],  [255,255,255]):
+        return False
+    elif np.array_equal( img[j][i+1],  [255,255,255]):
+        return False
+    elif np.array_equal( img[j][i-1],  [255,255,255]):
+        return False
+    else:
+        return True
