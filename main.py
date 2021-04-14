@@ -1,6 +1,7 @@
 from Utils import print_update, convert_frames_to_video
 from Inpainting import inpaint_all_frames
 from MaskRCNN import generate_masks_from_video
+from AudioProcessing import add_audio_to_video
 import os
 import sys
 import argparse
@@ -33,12 +34,13 @@ if __name__ == "__main__":
         pass
 
     print_update(objectsToMask)
-    fps = generate_masks_from_video(videoPath, objectsToMask)
-
+    #fps = generate_masks_from_video(videoPath, objectsToMask)
+    fps = 30
     print("Masking completed. Painting out masked objects...")
-    inpaint_all_frames(videoPath)
+    #inpaint_all_frames(videoPath)
 
     print("Inpainting completed. Compiling to video...")
     compiledPath = convert_frames_to_video(videoPath, fps)
+    add_audio_to_video(videoPath, compiledPath, fps)
 
     print("Compiled! to " + compiledPath)
