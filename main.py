@@ -6,6 +6,8 @@ import os
 import sys
 import argparse
 import warnings
+from AudioProcessing import get_objs_to_mask
+import time
 
 warnings.filterwarnings("ignore", category=Warning)
 
@@ -20,11 +22,12 @@ if __name__ == "__main__":
     args, unknown = parser.parse_known_args()
 
     videoPath = args.video
+    '''
     objectsToMask = args.objects
     objectsToMask = objectsToMask.split(",")
     for i in range(len(objectsToMask)):
         objectsToMask[i] = objectsToMask[i].strip()
-
+    '''
     if not os.path.exists(videoPath):
         sys.exit("Could not locate video '" + videoPath + "'")
 
@@ -33,14 +36,24 @@ if __name__ == "__main__":
     except Exception:
         pass
 
-    print_update(objectsToMask)
-    #fps = generate_masks_from_video(videoPath, objectsToMask)
-    fps = 30
+    print("Looking for Magic Words in audio...")
+    objectsToMask = get_objs_to_mask(videoPath)
+    #print(objectsToMask)
+
+
+    #print_update(objectsToMask)
+    print("Magic Word(s) found. Masking objects from the video...")
+    fps = generate_masks_from_video(videoPath, objectsToMask)
+    #fps = 30
     print("Masking completed. Painting out masked objects...")
-    #inpaint_all_frames(videoPath)
+    inpaint_all_frames(videoPath)
 
     print("Inpainting completed. Compiling to video...")
     compiledPath = convert_frames_to_video(videoPath, fps)
     add_audio_to_video(videoPath, compiledPath, fps)
 
-    print("Compiled! to " + compiledPath)
+    #remove soundless video
+    time.sleep(1)
+    os.remove(compiledPath)
+
+    print("Compiled! to " + compiledPath[:-3] + 'mp4')

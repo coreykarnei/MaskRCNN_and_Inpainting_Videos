@@ -4,6 +4,7 @@ import cv2
 import os
 import numpy as np
 from Utils import HiddenPrints
+import copy
 
 THRESHOLD = 0.2   # This value indicates the minimum confidence that a given mask needs for the model to consider it valid
 INFLATE_SIZE = 5  # This value is the size of the circle that will be drawn on each pixel of the mask in order to inflate it
@@ -53,7 +54,7 @@ def generate_masks_from_video(videoPath, objectsToMask):
         if ret == False:
             break
 
-        generate_mask_from_image(frame, objectsToMask, frameName, i, mrcnn)
+        generate_mask_from_image(frame, objectsToMask[i], frameName, i, mrcnn)
 
         i = i + 1
 
@@ -78,33 +79,56 @@ def generate_mask_from_image(frame, objectsToMask, frameName, frameIndex, model)
     frame = mx.nd.array(frame)
     x, orig_img = data.transforms.presets.rcnn.transform_test(frame, short=256)
 
-    # inference is done here
-    ids, scores, bboxes, masks = [xx[0].asnumpy() for xx in model(x)]
+    #print(objectsToMask)
+    if objectsToMask == "":
+        frameNameFrameIndex = frameName + str(frameIndex)
+        cv2.imwrite('output/' + frameName + '/' + frameNameFrameIndex + '_input.png', orig_img)
+        blackFrame = copy.deepcopy(orig_img)
+        j = 0
+        for row in blackFrame:
+            i = 0
+            for element in row:
+                row[i] = [0,0,0]
+                i = i + 1
+            # print(row)
+            j = j + 1
+        cv2.imwrite('output/' + frameName + '/' + frameNameFrameIndex + '_mask.png', blackFrame)
 
-    for i in range(scores.size):
-        if (scores[i] > THRESHOLD) & (scores[i] < 0.5):
-            scores[i] = 0.51
+    else:
+        objectsToMask = objectsToMask.split(",")
+        for i in range(len(objectsToMask)):
+            objectsToMask[i] = objectsToMask[i].strip()
 
-    ids, scores, bboxes, masks = remove_undesired_objects(objectsToMask, ids, scores, bboxes, masks)
 
-    width, height = orig_img.shape[1], orig_img.shape[0]
-    masks = utils.viz.expand_mask(masks, bboxes, (width, height), scores)
 
-    # masked_img = create_mask_img(masks, orig_img)
-    input_img, masked_img = create_input_for_inpainting(masks, orig_img)
+        # inference is done here
+        ids, scores, bboxes, masks = [xx[0].asnumpy() for xx in model(x)]
 
-    frameNameFrameIndex = frameName + str(frameIndex)
+        for i in range(scores.size):
+            if (scores[i] > THRESHOLD) & (scores[i] < 0.5):
+                scores[i] = 0.51
 
-    # input_img, masked_img = cv2.resize(input_img, desiredOutputSize ), cv2.resize(masked_img, desiredOutputSize)
+        ids, scores, bboxes, masks = remove_undesired_objects(objectsToMask, ids, scores, bboxes, masks)
 
-    cv2.imwrite('output/' + frameName + '/' + frameNameFrameIndex + '_mask.png', masked_img)
-    cv2.imwrite('output/' + frameName + '/' + frameNameFrameIndex + '_input.png', input_img)
+        width, height = orig_img.shape[1], orig_img.shape[0]
+        masks = utils.viz.expand_mask(masks, bboxes, (width, height), scores)
+
+        # masked_img = create_mask_img(masks, orig_img)
+        input_img, masked_img = create_input_for_inpainting(masks, orig_img)
+
+        frameNameFrameIndex = frameName + str(frameIndex)
+
+        # input_img, masked_img = cv2.resize(input_img, desiredOutputSize ), cv2.resize(masked_img, desiredOutputSize)
+
+        cv2.imwrite('output/' + frameName + '/' + frameNameFrameIndex + '_mask.png', masked_img)
+        cv2.imwrite('output/' + frameName + '/' + frameNameFrameIndex + '_input.png', input_img)
 
 
 def remove_undesired_objects(objects_to_remove, ids, scores, bboxes, masks):
     desired_object_ids = []
     for obj in objects_to_remove:
-        desired_object_ids.append(index_dict.get(obj))
+        if obj:
+            desired_object_ids.append(index_dict.get(obj))
 
     ids_to_remove = []
 
@@ -157,13 +181,25 @@ def create_input_for_inpainting(masks, original_image):
 
 
 def only_one_white_pixel(img, i, j):
-    if np.array_equal( img[j+1][i],  [255,255,255]):
-        return False
-    elif np.array_equal( img[j-1][i],  [255,255,255]):
-        return False
-    elif np.array_equal( img[j][i+1],  [255,255,255]):
-        return False
-    elif np.array_equal( img[j][i-1],  [255,255,255]):
-        return False
-    else:
-        return True
+    try:
+        if np.array_equal( img[j+1][i],  [255,255,255]):
+            return False
+    except:
+        pass
+    try:
+        if np.array_equal( img[j-1][i],  [255,255,255]):
+            return False
+    except:
+        pass
+    try:
+        if np.array_equal( img[j][i+1],  [255,255,255]):
+            return False
+    except:
+        pass
+    try:
+        if np.array_equal( img[j][i-1],  [255,255,255]):
+            return False
+    except:
+        pass
+
+    return True

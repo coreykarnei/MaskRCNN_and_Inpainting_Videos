@@ -15,18 +15,18 @@ def inpaint_all_frames(videoPath):
 
     base_dir = "output/" + videoPath.split(".")[0].split('/')[-1] + "/"
     checkpoint_dir = "model_logs/release_places2_256"
-
     i = 0
     while True:
         input_path = base_dir + videoPath.split(".")[0].split('/')[-1] + str(i) + "_input.png"
         mask_path = base_dir + videoPath.split(".")[0].split('/')[-1] + str(i) + "_mask.png"
         output_path = base_dir + videoPath.split(".")[0].split('/')[-1] + str(i) + "_out.png"
-        #print(input_path, mask_path, output_path)
         i = i+1
         try:
             inpaint_single_frame(input_path, mask_path, output_path, checkpoint_dir)
         except Exception:
+
             track = traceback.format_exc()
+            #print(track)
             if not track == traceback.format_exc():
                 print(track)
             break
@@ -36,6 +36,7 @@ def inpaint_single_frame(input_path, mask_path, output_path, checkpoint_dir):
 
     image = cv2.imread(input_path)
     mask = cv2.imread(mask_path)
+
     with HiddenPrints():
         FLAGS = ng.Config('inpaint.yml')
     model = InpaintCAModel()

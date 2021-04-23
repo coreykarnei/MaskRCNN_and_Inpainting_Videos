@@ -3,7 +3,7 @@ import sys
 import os
 import glob
 import natsort
-
+import traceback
 
 def convert_frames_to_video(videoPath, fps):
     videoName = videoPath.split(".")[0].split('/')[-1]
@@ -35,7 +35,7 @@ def convert_frames_to_video(videoPath, fps):
         try:
             out.write(frame_array[i])
         except Exception:
-            pass
+            print(traceback.format_exception())
     out.release()
     return outFName
 
@@ -43,17 +43,23 @@ def convert_frames_to_video(videoPath, fps):
 def print_update(objects_to_mask):
     bar = "Video loaded. Masking "
 
-    if len(objects_to_mask) == 1:
-        foo = objects_to_mask[0] + "(s)"
-    elif len(objects_to_mask) < 3:
-        foo = objects_to_mask[0] + "(s) and " + objects_to_mask[1] + "(s)"
+    toPrint = []
+    for obj in objects_to_mask[-1]:
+
+        if obj:
+            toPrint.append(obj)
+
+    if len(toPrint) == 1:
+        foo = toPrint[0] + "(s)"
+    elif len(toPrint) < 3:
+        foo = toPrint[0] + "(s) and " + toPrint[1] + "(s)"
     else:
         foo = ""
-        for i in range(len(objects_to_mask)):
-            if not i == len(objects_to_mask) - 1:
-                foo = foo + objects_to_mask[i] + "(s), "
+        for i in range(len(toPrint)):
+            if not i == len(toPrint) - 1:
+                foo = foo + toPrint[i] + "(s), "
             else:
-                foo = foo + "and " + objects_to_mask[i] + "(s)"
+                foo = foo + "and " + toPrint[i] + "(s)"
     print(bar + foo + "...")
     return
 
@@ -66,3 +72,25 @@ class HiddenPrints:
     def __exit__(self, exc_type, exc_val, exc_tb):
         sys.stdout.close()
         sys.stdout = self._original_stdout
+
+
+def count_frames(videoPath):
+    cap = cv2.VideoCapture(videoPath)
+
+    if (cap.isOpened() == False):
+        print("Error opening video stream or file")
+
+    i = 0
+    while (cap.isOpened()):
+        # Capture frame-by-frame
+        ret, frame = cap.read()
+
+        if ret == False:
+            break
+
+        i = i + 1
+
+    # When everything done, release the video capture object
+    cap.release()
+
+    return i
