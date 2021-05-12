@@ -2,10 +2,13 @@ import moviepy.editor as mpe
 from Utils import HiddenPrints, count_frames
 import os
 import speech_recognition as sr
+from MaskRCNN import wordInDict, index_dict
 
 
+## This function takes the path to the video and creates an array where each element in the array denotes which objects to mask on that frame.
 def get_objs_to_mask(videoPath):
     num_frames = count_frames(videoPath)
+    #print(num_frames)
     videoSound = mpe.AudioFileClip(videoPath)
     with HiddenPrints():
         videoSound.write_audiofile(videoPath[:-3] + "wav")
@@ -20,12 +23,30 @@ def get_objs_to_mask(videoPath):
 
     incomingMaskings = []
     with sound as source:
-        allWords = r.recognize_google(r.record(source))
+        try:
+            allWords = r.recognize_google(r.record(source))
+        except Exception:
+            print("Audio could not be processed. Please make sure the audio is clear and words are being said before trying again.")
+            exit()
         allWords = allWords.split(" ")
 
+        if not (('abracadabra' in allWords) or ('Abracadabra' in allWords)):
+            print("Magic word was never said. No magic can be done :(")
+            print("If you believe this is an error, please make sure 'abracadabra' is said clearly and distinctly.")
+            exit()
+
         for i in range(len(allWords)):
-            if allWords[i].lower() == "abracadabra":
-                incomingMaskings.append(allWords[i + 1])
+            try:
+                if allWords[i].lower() == "abracadabra":
+                    if wordInDict(allWords[i + 1]):
+                        incomingMaskings.append(allWords[i + 1])
+            except:
+                print("ea sports. its in the game")
+                pass
+
+    if not incomingMaskings:
+        print("The object(s) you are trying to mask are not currently supported. The list of supported objects are:")
+        print(index_dict.keys())
 
     confirmedMaskings = []
     objectsToMask = []
@@ -50,6 +71,7 @@ def get_objs_to_mask(videoPath):
     os.remove(videoPath[:-3] + "wav")
     return objectsToMask
 
+
 def update_confirmed_maskings(incoming, currentSound, confirmed):
     #print(currentSound, incoming)
     for word in incoming:
@@ -70,5 +92,6 @@ def add_audio_to_video(originalVideoPath, outputVideoPath, fps):
         out_clip = mpe.VideoFileClip(outputVideoPath)
         final_clip = out_clip.set_audio(orig_audio)
         final_clip.write_videofile(outputVideoPath[:-3] + 'mp4', fps=fps)
+        out_clip.close()
     #os.remove(outputVideoPath)
     return

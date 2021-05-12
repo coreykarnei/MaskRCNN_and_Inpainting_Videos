@@ -6,8 +6,6 @@ import numpy as np
 from Utils import HiddenPrints
 import copy
 
-THRESHOLD = 0.2   # This value indicates the minimum confidence that a given mask needs for the model to consider it valid
-INFLATE_SIZE = 5  # This value is the size of the circle that will be drawn on each pixel of the mask in order to inflate it
 
 index_dict = {'person': 0, 'bicycle': 1, 'car': 2, 'motorcycle': 3, 'airplane': 4, 'bus': 5, 'train': 6, 'truck': 7,
               'boat': 8, 'traffic light': 9, 'fire hydrant': 10, 'stop sign': 11,
@@ -15,8 +13,8 @@ index_dict = {'person': 0, 'bicycle': 1, 'car': 2, 'motorcycle': 3, 'airplane': 
               'elephant': 20, 'bear': 21, 'zebra': 22, 'giraffe': 23, 'backpack': 24, 'umbrella': 25,
               'handbag': 26, 'tie': 27, 'suitcase': 28, 'frisbee': 29, 'skis': 30, 'snowboard': 31, 'sports ball': 32,
               'kite': 33, 'baseball bat': 34, 'baseball glove': 35, 'skateboard': 36, 'surfboard': 37,
-              'tennis racket': 38,
-              'bottle': 39, 'wine glass': 40, 'cup': 41, 'fork': 42, 'knife': 43, 'spoon': 44, 'bowl': 45, 'banana': 46,
+              'tennis racket': 38, 'bottle': 39, 'wine glass': 40,
+              'cup': 41, 'fork': 42, 'knife': 43, 'spoon': 44, 'bowl': 45, 'banana': 46,
               'apple': 47, 'sandwich': 48, 'orange': 49, 'broccoli': 50, 'carrot': 51, 'hot dog': 52, 'pizza': 53,
               'donut': 54,
               'cake': 55, 'chair': 56, 'couch': 57, 'potted plant': 58, 'bed': 59, 'dining table': 60, 'toilet': 61,
@@ -26,7 +24,8 @@ index_dict = {'person': 0, 'bicycle': 1, 'car': 2, 'motorcycle': 3, 'airplane': 
               'teddy bear': 77, 'hair drier': 78, 'toothbrush': 79}
 
 
-def generate_masks_from_video(videoPath, objectsToMask):
+def generate_masks_from_video(videoPath, objectsToMask, minConfidence, inflation):
+
     with HiddenPrints():
         mrcnn = model_zoo.get_model("mask_rcnn_fpn_resnet101_v1d_coco", pretrained=True)
 
@@ -54,7 +53,7 @@ def generate_masks_from_video(videoPath, objectsToMask):
         if ret == False:
             break
 
-        generate_mask_from_image(frame, objectsToMask[i], frameName, i, mrcnn)
+        generate_mask_from_image(frame, objectsToMask[i], frameName, i, mrcnn, minConfidence, inflation)
 
         i = i + 1
 
@@ -64,7 +63,7 @@ def generate_masks_from_video(videoPath, objectsToMask):
     return fps
 
 
-def generate_mask_from_image(frame, objectsToMask, frameName, frameIndex, model):
+def generate_mask_from_image(frame, objectsToMask, frameName, frameIndex, model, THRESHOLD, inflation):
     ## Inputs:
     ##       image_path: string path to image to be operated on
     ##       objects_to_remove: list of object names to be masked
@@ -99,8 +98,8 @@ def generate_mask_from_image(frame, objectsToMask, frameName, frameIndex, model)
         for i in range(len(objectsToMask)):
             objectsToMask[i] = objectsToMask[i].strip()
 
-
-
+        #print(objectsToMask)
+        #print(index_dict.get(objectsToMask[0]))
         # inference is done here
         ids, scores, bboxes, masks = [xx[0].asnumpy() for xx in model(x)]
 
@@ -114,7 +113,7 @@ def generate_mask_from_image(frame, objectsToMask, frameName, frameIndex, model)
         masks = utils.viz.expand_mask(masks, bboxes, (width, height), scores)
 
         # masked_img = create_mask_img(masks, orig_img)
-        input_img, masked_img = create_input_for_inpainting(masks, orig_img)
+        input_img, masked_img = create_input_for_inpainting(masks, orig_img, inflation)
 
         frameNameFrameIndex = frameName + str(frameIndex)
 
@@ -130,11 +129,15 @@ def remove_undesired_objects(objects_to_remove, ids, scores, bboxes, masks):
         if obj:
             desired_object_ids.append(index_dict.get(obj))
 
+    #print(desired_object_ids)
+
     ids_to_remove = []
 
     for i in range(ids.size):
         if desired_object_ids.count(int(ids[i])) == 0:
             ids_to_remove.append(i)
+
+    #print(ids_to_remove)
 
     ids = np.delete(ids, ids_to_remove)
     scores = np.delete(scores, ids_to_remove)
@@ -143,7 +146,7 @@ def remove_undesired_objects(objects_to_remove, ids, scores, bboxes, masks):
     return ids, scores, bboxes, masks
 
 
-def create_input_for_inpainting(masks, original_image):
+def create_input_for_inpainting(masks, original_image, INFLATE_SIZE):
     img_pre_output = original_image.copy()
     for mask in masks:
         j = 0
@@ -203,3 +206,10 @@ def only_one_white_pixel(img, i, j):
         pass
 
     return True
+
+
+def wordInDict(word):
+    if word in index_dict.keys():
+        return True
+    else:
+        return False

@@ -5,6 +5,7 @@ import glob
 import natsort
 import traceback
 
+
 def convert_frames_to_video(videoPath, fps):
     videoName = videoPath.split(".")[0].split('/')[-1]
     filesLocation = "output/" + videoName + "/*"
