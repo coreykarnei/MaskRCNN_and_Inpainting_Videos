@@ -1,5 +1,5 @@
 # MaskRCNN_and_Inpainting_Videos
-This is a pipeline that seamlessly combines the masking power of MaskRCNN with the inpainting abilities of DeepFillv2 in order to remove as many as 80 types of objects from a video. 
+This is a pipeline that seamlessly combines the masking power of MaskRCNN with the inpainting abilities of DeepFillv2 in order to remove as many as 80 types of objects from a video. Simply say "Abracadabra [object]" in the video and this system will automatically detect that, mask the object, and inpaint it to give the illusion that the object has vanished!
 # Installation
 In order to run, clone this project and create a new Conda enviornment. Once inside the new enviornment, run the following command:
 ```
@@ -14,15 +14,15 @@ After that you are ready to go!
 # Usage
 To process a video, run a command of the following structure:
 ```
-python main.py --video PathToVideo --object ObjectsToMask
+python main.py --video PathToVideo
 ```
-Where PathToVideo is a string path to the video you wish to process, and ObjectsToMask is a string comprised of comma-seperated classes that you want removed. These must be listed in MaskRCNN's existing classes located at ~~ . ObjectsToMask can include one class or several. Some examples include
+Where PathToVideo is a string path to the video you wish to process. Additionally, you can also adjust the Inflation and Minimum Confidence. Inflation referes to the number of pixels to 'inflate' the object mask by, making it grow by that number of pixels in each direction. By default this value is 5. Minimum Confidence refers to the minimum value that MaskRCNN needs in order to consider a detected object as valid. By default this value is 0.5
+
+These parameters can be set in the following way:
 ```
-"person"
-"bottle, apple"
-"automobile, fork, bowl"
+python main.py --video PathToVideo --inflation inflationValue --minConfidence confidenceValue
 ```
-You can try removing the person in the test video using the following command:
+You can try removing the bottle in the test video using the following command:
 ```
-python main.py --video "videos/test.mov" --object "person"
+python main.py --video "videos/bottle.mov"
 ```
