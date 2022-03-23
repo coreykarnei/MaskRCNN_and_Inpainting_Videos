@@ -2,7 +2,7 @@
 https://user-images.githubusercontent.com/31517198/118027844-03dfe280-b328-11eb-97fd-1c59a83efabe.mp4
 
 # MaskRCNN_and_Inpainting_Videos
-This is a pipeline that seamlessly combines the masking power of MaskRCNN with the inpainting abilities of DeepFillv2 in order to remove as many as 80 types of objects from a video. Simply say "Abracadabra [object]" in the video and this system will automatically detect that, mask the object, and inpaint it to give the illusion that the object has vanished!
+This is a pipeline that seamlessly combines the masking power of MaskRCNN with the inpainting abilities of DeepFillv2 in order to remove as many as 80 types of objects from a video. Simply say "Abracadabra [object]" in the video and this system will automatically detect that, mask the object, and inpaint it to give the illusion that the object has vanished! This project has received the Ram’s Horn Best Project Award in EE381K Digital Video Class (spring 2021).
 # Installation
 In order to run, clone this project and create a new Conda enviornment. Once inside the new enviornment, run the following command:
 ```
